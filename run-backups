@@ -1,22 +1,13 @@
 #!/usr/bin/perl
 use strict;
 
-my $pgbase = "/opt/postgresql/pg95";
-
-$ENV{PGHOME}          = "$pgbase";
-$ENV{PGDATA}          = "$pgbase/data";
-$ENV{PATH}            = "$pgbase/bin:" . $ENV{PATH};
-$ENV{LD_LIBRARY_PATH} = "$pgbase/lib:" . $ENV{LD_LIBRARY_PATH};
-$ENV{PGUSER}          = "postgres";
-$ENV{PGPORT}          = 5432;
-
 my @ts = localtime(time);
 
 my $tstamp = sprintf( "%.4d%.2d%.2d-%.2d%.2d", $ts[5] + 1900, $ts[4] + 1, $ts[3], $ts[2], $ts[1] );
 
-my $base = "/local/postgresql-db-backups";
+my $base = "/local/postgres-db-backups";
 
-system("/local/postgresql/clean-backups");
+system("/local/postgres/clean-backups");
 
 system( "mkdir", "-p", "$base/latest" );
 
@@ -28,7 +19,11 @@ my $datadir = "/local/postgresql/data";
 # Figure out list of databases to back up
 my @databases = ();
 open( my $in, "-|" )
-    || exec( "$pgbase/bin/psql", "-t", "-c", "SELECT datname FROM pg_database WHERE datistemplate = false" );
+    || exec(
+    "docker", "exec", "postgres", "psql",
+    "-U" => "postgres",
+    "-t", "-c", "SELECT datname FROM pg_database WHERE datistemplate = false"
+    );
 while ( defined( my $line = <$in> ) ) {
     chomp($line);
     if ( $line =~ /[a-z0-9]+/io ) {
@@ -49,8 +44,14 @@ foreach my $db (@databases) {
     print "Running backup of PostgreSQL database ($db) to ($base/latest/${db}.dmp)...\n";
     my $subout;
     unless ( open( $subout, "-|" ) ) {
+        my @cmd = (
+            "docker", "exec", "postgres", "pg_dump",
+            "-U" => "postgres",
+            "--file=$base/latest/${db}.dmp", "-C", "-b", "-Fc", "-v", $db
+        );
+        print "+ ", join( " ", @cmd ), "\n";
         open( STDERR, ">&STDOUT" );
-        exec("$pgbase/bin/pg_dump --file=$base/latest/${db}.dmp -C -b -Fc -v $db");
+        exec(@cmd);
         exit(0);
     }
     my $lprint = time;
