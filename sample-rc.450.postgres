@@ -1,0 +1,37 @@
+#!/bin/bash
+
+IMAGE=pgautoupgrade/pgautoupgrade:17-bookworm
+docker pull $IMAGE
+
+umask 077
+ENV_FILE=/dev/shm/postgres-docker-env
+rm -f $ENV_FILE
+
+echo -n POSTGRES_PASSWORD= >> $ENV_FILE
+authsrv-decrypt root postgres postgres | awk 'ORS=""; { print $1 }' >> $ENV_FILE
+echo "" >> $ENV_FILE
+
+mkdir -p /local/postgres/data /local/postgres-db-backups/data /local/postgres-db-backups/latest
+
+# Expected UID in container
+chown -R 999:999 /local/postgres/data /local/postgres-db-backups/data /local/postgres-db-backups/latest
+chmod 700 /local/postgres/data /local/postgres-db-backups/data /local/postgres-db-backups/latest
+
+docker stop postgres
+sleep 1
+docker rm postgres
+sleep 1
+
+docker run \
+  --restart unless-stopped \
+  --detach \
+  --network ttrss \
+  --publish 5432:5432 \
+  --name postgres \
+  --env PGDATA=/var/lib/postgresql/data/pgdata \
+  -v /local/postgres/data:/var/lib/postgresql/data \
+  -v /local/postgres-db-backups:/local/postgres-db-backups \
+  --log-opt max-size=50m --log-opt max-file=20 \
+  --env-file=$ENV_FILE \
+  $IMAGE
+
