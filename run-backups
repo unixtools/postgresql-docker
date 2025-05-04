@@ -41,7 +41,7 @@ umask(077);
 
 foreach my $db (@databases) {
 
-    print "Running backup of PostgreSQL database ($db) to ($base/latest/${db}.dmp)...\n";
+    print "Running binary backup of PostgreSQL database ($db) to ($base/latest/${db}.dmp)...\n";
     my $subout;
     unless ( open( $subout, "-|" ) ) {
         my @cmd = (
@@ -72,6 +72,42 @@ foreach my $db (@databases) {
     system( "mkdir", "-p", "$dest" );
 
     my @cmd = ( "cp", "$base/latest/${db}.dmp", "$dest/${tstamp}.dmp" );
+    print "+ ", join( " ", @cmd ), "\n";
+    system(@cmd);
+
+	#
+
+    print "Running text backup of PostgreSQL database ($db) to ($base/latest/${db}.sql)...\n";
+    my $subout;
+    unless ( open( $subout, "-|" ) ) {
+        my @cmd = (
+            "docker", "exec", "postgres", "pg_dump",
+            "-U" => "postgres",
+            "--file=$base/latest/${db}.sql", "-C", "-b", "-FP", "-v", $db
+        );
+        print "+ ", join( " ", @cmd ), "\n";
+        open( STDERR, ">&STDOUT" );
+        exec(@cmd);
+        exit(0);
+    }
+    my $lprint = time;
+    while ( defined( my $line = <$subout> ) ) {
+
+        # if less than 5 seconds since last output, don't output these messages
+        if ( ( time - $lprint ) < 5 ) {
+            next if ( $line =~ /setting owner and privileges for BLOB/o );
+            next if ( $line =~ /executing BLOB/o );
+        }
+        print $line;
+        $lprint = time;
+    }
+    close($subout);
+    print "Done.\n";
+
+    my $dest = sprintf( "%s/data/%s/%.4d/%.2d/%.2d", $base, $db, $ts[5] + 1900, $ts[4] + 1, $ts[3] );
+    system( "mkdir", "-p", "$dest" );
+
+    my @cmd = ( "cp", "$base/latest/${db}.sql", "$dest/${tstamp}.sql" );
     print "+ ", join( " ", @cmd ), "\n";
     system(@cmd);
 }
