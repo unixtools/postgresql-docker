@@ -1,1 +1,2 @@
-# postgresql-docker
+# postgresql
+postgresql tools and scripts

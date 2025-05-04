@@ -1,0 +1,79 @@
+#!/usr/bin/perl
+use strict;
+
+my $pgbase = "/opt/postgresql/pg95";
+
+$ENV{PGHOME}          = "$pgbase";
+$ENV{PGDATA}          = "$pgbase/data";
+$ENV{PATH}            = "$pgbase/bin:" . $ENV{PATH};
+$ENV{LD_LIBRARY_PATH} = "$pgbase/lib:" . $ENV{LD_LIBRARY_PATH};
+$ENV{PGUSER}          = "postgres";
+$ENV{PGPORT}          = 5432;
+
+my @ts = localtime(time);
+
+my $tstamp = sprintf( "%.4d%.2d%.2d-%.2d%.2d", $ts[5] + 1900, $ts[4] + 1, $ts[3], $ts[2], $ts[1] );
+
+my $base = "/local/postgresql-db-backups";
+
+system("/local/postgresql/clean-backups");
+
+system( "mkdir", "-p", "$base/latest" );
+
+# DO NOT EVER USE --skip-opt, it throws away important
+# stuff like auto_increment flags
+
+my $datadir = "/local/postgresql/data";
+
+# Figure out list of databases to back up
+my @databases = ();
+open( my $in, "-|" )
+    || exec( "$pgbase/bin/psql", "-t", "-c", "SELECT datname FROM pg_database WHERE datistemplate = false" );
+while ( defined( my $line = <$in> ) ) {
+    chomp($line);
+    if ( $line =~ /[a-z0-9]+/io ) {
+        $line =~ s|^\s+||go;
+        $line =~ s|\s+$||go;
+        push( @databases, $line );
+    }
+}
+close($in);
+@databases = sort @databases;
+
+print "PostgreSQL databases: ", join( ", ", @databases ), "\n";
+
+umask(077);
+
+foreach my $db (@databases) {
+
+    print "Running backup of PostgreSQL database ($db) to ($base/latest/${db}.dmp)...\n";
+    my $subout;
+    unless ( open( $subout, "-|" ) ) {
+        open( STDERR, ">&STDOUT" );
+        exec("$pgbase/bin/pg_dump --file=$base/latest/${db}.dmp -C -b -Fc -v $db");
+        exit(0);
+    }
+    my $lprint = time;
+    while ( defined( my $line = <$subout> ) ) {
+
+        # if less than 5 seconds since last output, don't output these messages
+        if ( ( time - $lprint ) < 5 ) {
+            next if ( $line =~ /setting owner and privileges for BLOB/o );
+            next if ( $line =~ /executing BLOB/o );
+        }
+        print $line;
+        $lprint = time;
+    }
+    close($subout);
+    print "Done.\n";
+
+    my $dest = sprintf( "%s/data/%s/%.4d/%.2d/%.2d", $base, $db, $ts[5] + 1900, $ts[4] + 1, $ts[3] );
+    system( "mkdir", "-p", "$dest" );
+
+    my @cmd = ( "cp", "$base/latest/${db}.dmp", "$dest/${tstamp}.dmp" );
+    print "+ ", join( " ", @cmd ), "\n";
+    system(@cmd);
+}
+
+print "Cleaning backups dir...\n";
+system("/local/postgresql/clean-backups");
