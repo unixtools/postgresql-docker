@@ -16,6 +16,8 @@ postgres=# create user appname with encrypted password '---snip---';
 CREATE ROLE
 postgres=# grant all privileges on database appname to appname;
 GRANT
+postgres=# alter database appname owner to appname;
+ALTER DATABASE
 postgres=# \connect appname
 You are now connected to database "appname" as user "postgres".
 appname=# grant all on schema public to appname;
