@@ -22,3 +22,8 @@ appname=# grant all on schema public to appname;
 GRANT
 
 
+
+#
+# Run the above for user 'root' db 'root' - but don't set the password
+# This will silence the container warnings about root role missing - may be a better way for this though
+#
