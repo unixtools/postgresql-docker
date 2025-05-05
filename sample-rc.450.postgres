@@ -11,7 +11,7 @@ echo -n POSTGRES_PASSWORD= >> $ENV_FILE
 authsrv-decrypt root postgres postgres | awk 'ORS=""; { print $1 }' >> $ENV_FILE
 echo "" >> $ENV_FILE
 
-mkdir -p /local/postgres/data /local/postgres-db-backups/data /local/postgres-db-backups/latest
+mkdir -p /local/postgres/data/pgdata /local/postgres-db-backups/data /local/postgres-db-backups/latest
 
 # Expected UID in container
 chown -R 999:999 /local/postgres/data /local/postgres-db-backups/data /local/postgres-db-backups/latest
