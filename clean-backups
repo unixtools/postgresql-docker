@@ -1,9 +1,9 @@
 #!/bin/sh -x
 
-mkdir -p /local/postgresql-db-backups/data
+mkdir -p /local/postgres-db-backups/data
 
-touch /local/postgresql-db-backups
-find /local/postgresql-db-backups/data/ -type f -mtime +5 -print -exec rm -f {} \;
+touch /local/postgres-db-backups
+find /local/postgres-db-backups/data/ -type f -mtime +5 -print -exec rm -f {} \;
 
-mkdir /local/postgresql-db-backups/data/dummy$$
-find /local/postgresql-db-backups/data/* -depth -type d -exec rmdir {} \; >/dev/null 2>&1
+mkdir /local/postgres-db-backups/data/dummy$$
+find /local/postgres-db-backups/data/* -depth -type d -exec rmdir {} \; >/dev/null 2>&1
