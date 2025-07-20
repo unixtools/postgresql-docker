@@ -7,6 +7,9 @@ umask 077
 ENV_FILE=/dev/shm/postgres-docker-env
 rm -f $ENV_FILE
 
+# Change to application specific if running on application host
+docker network create postgres >/dev/null 2>&1
+
 echo -n POSTGRES_PASSWORD= >> $ENV_FILE
 authsrv-decrypt root postgres postgres | awk 'ORS=""; { print $1 }' >> $ENV_FILE
 echo "" >> $ENV_FILE
@@ -25,7 +28,7 @@ sleep 1
 docker run \
   --restart unless-stopped \
   --detach \
-  --network appname \
+  --network postgres \
   --publish 5432:5432 \
   --name postgres \
   --env PGDATA=/var/lib/postgresql/data/pgdata \
