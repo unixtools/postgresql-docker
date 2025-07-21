@@ -47,7 +47,7 @@ foreach my $db (@databases) {
         my @cmd = (
             "docker", "exec", "postgres", "pg_dump",
             "-U" => "postgres",
-            "--file=$base/latest/${db}.dmp", "-C", "-b", "-Fc", "-v", $db
+            "--file=$base/latest/${db}.dmp.gz", "-Z1", "-C", "-b", "-Fc", "-v", $db
         );
         print "+ ", join( " ", @cmd ), "\n";
         open( STDERR, ">&STDOUT" );
@@ -71,7 +71,7 @@ foreach my $db (@databases) {
     my $dest = sprintf( "%s/data/%s/%.4d/%.2d/%.2d", $base, $db, $ts[5] + 1900, $ts[4] + 1, $ts[3] );
     system( "mkdir", "-p", "$dest" );
 
-    my @cmd = ( "cp", "$base/latest/${db}.dmp", "$dest/${tstamp}.dmp" );
+    my @cmd = ( "cp", "$base/latest/${db}.dmp.gz", "$dest/${tstamp}.dmp.gz" );
     print "+ ", join( " ", @cmd ), "\n";
     system(@cmd);
 
@@ -83,7 +83,7 @@ foreach my $db (@databases) {
         my @cmd = (
             "docker", "exec", "postgres", "pg_dump",
             "-U" => "postgres",
-            "--file=$base/latest/${db}.sql", "-C", "-b", "-FP", "-v", $db
+            "--file=$base/latest/${db}.sql.gz", "-C", "-Z1", "-b", "-FP", "-v", $db
         );
         print "+ ", join( " ", @cmd ), "\n";
         open( STDERR, ">&STDOUT" );
@@ -107,7 +107,7 @@ foreach my $db (@databases) {
     my $dest = sprintf( "%s/data/%s/%.4d/%.2d/%.2d", $base, $db, $ts[5] + 1900, $ts[4] + 1, $ts[3] );
     system( "mkdir", "-p", "$dest" );
 
-    my @cmd = ( "cp", "$base/latest/${db}.sql", "$dest/${tstamp}.sql" );
+    my @cmd = ( "cp", "$base/latest/${db}.sql.gz", "$dest/${tstamp}.sql.gz" );
     print "+ ", join( " ", @cmd ), "\n";
     system(@cmd);
 }
